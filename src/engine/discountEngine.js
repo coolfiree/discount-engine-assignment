@@ -60,7 +60,7 @@ export function calculateDiscountAmount(price, rule) {
     return Math.round(price * rule.value / 100)
   }
   if (rule.type === 'flat') {
-    return rule.value
+    return Math.min(rule.value, price)
   }
   return 0
 }
@@ -69,7 +69,17 @@ export function calculateDiscountAmount(price, rule) {
  * Builds the customer-facing reasoning string for an applied rule.
  */
 function ruleToReasoning(rule) {
-  const scopeLabel = rule.scope === 'brand' ? 'Brand' : 'Platform'
+
+  let scopeLabel = ''
+
+if (rule.scope === 'brand') {
+  scopeLabel = 'Brand'
+} else if (rule.scope === 'platform') {
+  scopeLabel = 'Platform'
+} else if (rule.scope === 'cart') {
+  scopeLabel = 'Cart'
+}
+
   if (rule.type === 'percentage') {
     return `${scopeLabel} offer: ${rule.value}% off`
   }
@@ -162,10 +172,77 @@ export function applyDiscounts(item, rules) {
  * Runs applyDiscounts across every item in the cart.
  * Returns an array of DiscountResult objects.
  */
-export function processCart(cartItems, rules) {
-  return cartItems.map((item) => applyDiscounts(item, rules))
+
+
+/**
+ * Returns the first applicable cart rule, or null if none apply.
+ */
+function findApplicableCartRule(subtotal, rules) {
+  const matching = rules.filter(
+    (rule) => rule.scope === 'cart' && subtotal >= Number(rule.minCartValue || 0)
+  )
+
+  if (matching.length === 0) {
+    return null
+  }
+
+  return [...matching].sort(
+    (a, b) => calculateDiscountAmount(subtotal, b) - calculateDiscountAmount(subtotal, a)
+  )[0]
 }
 
+/**
+ * Applies a cart-level discount and returns summary information.
+ */
+function calculateCartSummary(results, rules) {
+  const subtotal = cartTotal(results)
+
+  const cartRule = findApplicableCartRule(subtotal, rules)
+
+  if (!cartRule) {
+    return {
+      subtotal,
+      cartDiscount: 0,
+      finalTotal: subtotal,
+      reasoning: '',
+      appliedRule: null,
+    }
+  }
+
+  const cartDiscount = calculateDiscountAmount(subtotal, cartRule)
+  const cartRuleLabel = cartRule.type === 'percentage'
+    ? `${cartRule.value}% off`
+    : `Rs.${cartRule.value} off`
+
+  return {
+    subtotal,
+    cartDiscount,
+    finalTotal: subtotal - cartDiscount,
+    reasoning: `Cart offer: ${cartRuleLabel} — Rs.${cartDiscount.toLocaleString('en-IN')} saved`,
+    appliedRule: cartRule.ruleId,
+    appliedRuleLabel: cartRuleLabel,
+  }
+}
+
+
+/**export function processCart(cartItems, rules) {
+  return cartItems.map((item) => applyDiscounts(item, rules))
+}**/
+
+export function processCart(cartItems, rules) {
+  // Apply existing item-level discounts
+  const itemResults = cartItems.map((item) =>
+    applyDiscounts(item, rules)
+  )
+
+  // Calculate cart summary
+  const cartSummary = calculateCartSummary(itemResults, rules)
+
+  return {
+    items: itemResults,
+    cartSummary,
+  }
+}
 /**
  * Sums the final prices across all results.
  */
