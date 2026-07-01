@@ -11,7 +11,7 @@ npm run dev
 
 Open http://localhost:5173
 
-To enable the AI-backed rule parser, set `VITE_GEMINI_API_KEY` before running the app. You can also set `VITE_GEMINI_MODEL` if you want to override the default model; the fallback is `gemini-2.0-flash`.
+To enable the AI-backed rule parser, set `VITE_GEMINI_API_KEY` before running the app. You can also set `VITE_GEMINI_MODEL` if you want to override the default model; the fallback is `gemini-3.5-flash`.
 
 ## Build
 
@@ -20,7 +20,7 @@ npm run build
 ```
 
 Deploy the `dist/` folder to Vercel, Netlify, or another static host.
-Live deployment URL: add your deployed URL here before submission.
+Live deployment URL: https://discount-engine-assignment-olive.vercel.app/
 
 ## Features
 
